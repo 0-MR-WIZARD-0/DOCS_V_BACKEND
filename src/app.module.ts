@@ -5,10 +5,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config'
 import { Admin } from './admin/admin.entity'
 import { Document } from './documents/documents.entity'
 import { AdminModule } from './admin/admin.module'
+import { AuthModule } from './auth/auth.module'
+import { Category } from './categories/category.entity'
+import { CategoryModule } from './categories/category.module'
 
 @Module({
   imports: [
      ConfigModule.forRoot({
+      envFilePath: `.env.${process.env.NODE_ENV}`,
       isGlobal: true,
     }),
     TypeOrmModule.forRootAsync({
@@ -20,12 +24,14 @@ import { AdminModule } from './admin/admin.module'
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         synchronize: false,
-        entities: [Admin, Document]
+        entities: [Admin, Document, Category]
       }),
       inject: [ConfigService],
     }),
     DocumentsModule,
+    CategoryModule,
     AdminModule,
+    AuthModule
   ],
 })
 export class AppModule {}

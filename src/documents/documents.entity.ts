@@ -1,4 +1,5 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm'
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn} from 'typeorm'
+import { Category } from '../categories/category.entity';
 
 @Entity()
 export class Document {
@@ -8,12 +9,19 @@ export class Document {
   @Column({ nullable: true })
   title?: string
 
-  @Column()
-  filename: string
+  @Column({ nullable: true })
+  description?: string;
 
-  @Column()
-  path: string
+  @ManyToOne(() => Category, (category) => category.documents, { nullable: true })
+  @JoinColumn({ name: "categoryId" })
+  category: Category;
 
-  @CreateDateColumn()
+  @Column({ nullable: true })
+  filename?: string;
+
+  @Column({ nullable: true })
+  path?: string;
+
+  @Column({type: "date"})
   createdAt: Date
 }
