@@ -21,7 +21,7 @@
     "typeorm": "typeorm-ts-node-commonjs -d src/data-source.ts",
     "migration:generate": "npm run typeorm -- migration:generate",
     "migration:run": "npm run typeorm -- migration:run",
-    "seed:admin": "node dist/seeds/create-admin.seed.js"
+    "seed:admin": "node dist/seeds/create-admin.js"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
