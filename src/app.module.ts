@@ -12,7 +12,6 @@ import { CategoryModule } from './categories/category.module'
 @Module({
   imports: [
      ConfigModule.forRoot({
-      envFilePath: `.env.${process.env.NODE_ENV}`,
       isGlobal: true,
     }),
     TypeOrmModule.forRootAsync({
