@@ -10,14 +10,14 @@ export class AuthService {
       const token = this.jwtService.sign({ login });
       return { token };
     }
-    throw new UnauthorizedException('Неверные учетные данные');
+    throw new UnauthorizedException('Invalid credentials');
   }
 
   verifyToken(token: string) {
     try {
       return this.jwtService.verify(token);
     } catch {
-      throw new UnauthorizedException('Токен недействителен');
+      throw new UnauthorizedException('Token is invalid');
     }
   }
 }

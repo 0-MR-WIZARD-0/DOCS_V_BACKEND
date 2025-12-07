@@ -1,12 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+
 import { Document } from './documents.entity';
+import { Category } from '../categories/category.entity';
+
 import { CreateDocumentDto } from '../DTO/create-document.dto';
 import { UpdateDocumentDto } from '../DTO/update-document.dto';
-import { Category } from '../categories/category.entity';
-import * as path from 'path';
-import { unlinkSync, existsSync } from 'fs';
+
+import { FileService } from '../files/file.service';
+import { mapDtoToDocument } from './documents.mapper';
 
 @Injectable()
 export class DocumentsService {
@@ -16,6 +19,8 @@ export class DocumentsService {
 
     @InjectRepository(Category)
     private categoryRepo: Repository<Category>,
+
+    private readonly fileService: FileService,
   ) {}
 
   private async getOrCreateCategory(name: string): Promise<Category> {
@@ -26,96 +31,116 @@ export class DocumentsService {
     if (existing) return existing;
 
     const newCat = this.categoryRepo.create({ name: name.toLowerCase() });
-    return await this.categoryRepo.save(newCat);
+    return this.categoryRepo.save(newCat);
   }
 
   async create(dto: CreateDocumentDto) {
-     const categoryName = dto.category
-    ? await this.getOrCreateCategory(dto.category)
-    : null;
+    const category = await this.getOrCreateCategory(dto.category);
 
-  const docData: Partial<Document> = {
-    title: dto.title,
-    description: dto.description,
-    category: categoryName,
-    filename: dto.file?.originalname ?? null,
-    path: dto.file ? `uploads/${dto.file.filename}` : null,
-  };
-
-  if (dto.createdAt) {
-    const parsedDate = new Date(dto.createdAt);
-    if (!isNaN(parsedDate.getTime())) {
-      docData.createdAt = parsedDate;
+    if (dto.title) {
+      const existing = await this.repo.findOne({
+        where: { title: dto.title, category: { id: category.id } },
+        relations: ['category'],
+      });
+      if (existing) {
+        throw new BadRequestException(
+          `Document with title "${dto.title}" already exists in category "${category.name}".`
+        );
+      }
     }
-  }
 
-  const doc = this.repo.create(docData);
-  return this.repo.save(doc);
+    const data = mapDtoToDocument(dto, category);
+    const doc = this.repo.create(data);
+    return this.repo.save(doc);
   }
 
   async findAll() {
-    return this.repo.find({ 
-        relations: ["category"],
-        order: { createdAt: 'DESC' } 
+    return this.repo.find({
+      relations: ['category'],
+      order: { createdAt: 'DESC' },
     });
   }
 
-  async update(id: number, updateDto: UpdateDocumentDto) {
-    const doc = await this.repo.findOneBy({ id });
+  async update(id: number, dto: UpdateDocumentDto) {
+    const doc = await this.repo.findOne({
+      where: { id },
+      relations: ['category'],
+    });
+
     if (!doc) throw new NotFoundException('Document not found');
 
-    if (updateDto.title) doc.title = updateDto.title;
-    if (updateDto.description) doc.description = updateDto.description;
-    if (updateDto.createdAt) doc.createdAt = new Date(updateDto.createdAt);
+    if (dto.category) {
+      const category = await this.getOrCreateCategory(dto.category);
 
-    if (updateDto.category) {
-      doc.category = await this.getOrCreateCategory(updateDto.category);
-    }
-
-    if (updateDto.file) {
-      if (doc.path) {
-        const oldFilePath = path.join(process.cwd(), doc.path);
-        if (existsSync(oldFilePath)) unlinkSync(oldFilePath);
+      if (dto.title) {
+        const existing = await this.repo.findOne({
+          where: { title: dto.title, category: { id: category.id } },
+          relations: ['category'],
+        });
+        if (existing && existing.id !== id) {
+          throw new BadRequestException(
+            `Document with title "${dto.title}" already exists in category "${category.name}".`
+          );
+        }
       }
 
-      doc.filename = updateDto.file.originalname;
-      doc.path = `uploads/${updateDto.file.filename}`;
+      doc.category = category;
     }
+
+    if (dto.file) {
+      await this.fileService.deleteFile(doc.path);
+      doc.filename = dto.file.originalname;
+      doc.path = `uploads/${dto.file.filename}`;
+    } else if (dto.removeFile && doc.path) {
+      await this.fileService.deleteFile(doc.path);
+      doc.filename = null;
+      doc.path = null;
+    }
+
+    this.repo.merge(doc, {
+      title: dto.title,
+      description: dto.description,
+      createdAt: dto.createdAt ? new Date(dto.createdAt) : doc.createdAt,
+    });
 
     return this.repo.save(doc);
   }
 
   async remove(id: number) {
     const doc = await this.repo.findOne({ where: { id } });
+    if (!doc) throw new NotFoundException('Document not found');
 
-    if (!doc) throw new NotFoundException('Документ не найден');
-
-    if (doc.path) {
-      const filePath = path.join(process.cwd(), doc.path);
-      if (existsSync(filePath)) unlinkSync(filePath);
-    }
-
+    if (doc.path) await this.fileService.deleteFile(doc.path);
     await this.repo.delete(id);
-    return { message: 'Документ удалён успешно' };
+
+    return { message: 'Document deleted successfully' };
   }
 
   async search(title?: string, from?: string, to?: string, category?: string) {
-    const query = this.repo.createQueryBuilder('document');
+    const query = this.repo
+      .createQueryBuilder('document')
+      .leftJoinAndSelect('document.category', 'category');
 
     if (title) {
-      query.andWhere('LOWER(document.title) LIKE LOWER(:title)', { 
-        title: `%${title.toLowerCase()}%` 
+      query.andWhere('LOWER(document.title) LIKE LOWER(:title)', {
+        title: `%${title}%`,
       });
     }
+
     if (from) {
       query.andWhere('document.createdAt >= :from', { from });
     }
+
     if (to) {
       query.andWhere('document.createdAt <= :to', { to });
     }
+
     if (category) {
-      query.andWhere('document.category = :category', { category: category.toLowerCase() });
+      query.andWhere('LOWER(category.name) = LOWER(:cat)', {
+        cat: category.toLowerCase(),
+      });
     }
+
     return query.orderBy('document.createdAt', 'DESC').getMany();
   }
 }

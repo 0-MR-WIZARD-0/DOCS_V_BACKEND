@@ -7,7 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 
 @Controller('auth')
 export class AuthController {
-   constructor(
+  constructor(
     private readonly adminService: AdminService,
     private readonly authService: AuthService,
     private readonly jwtService: JwtService,
@@ -19,24 +19,23 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const admin = await this.adminService.findByUsername(body.username);
-    if (!admin) throw new UnauthorizedException('Неверные учетные данные');
+    if (!admin) throw new UnauthorizedException('Invalid credentials');
 
     const isMatch = await bcrypt.compare(body.password, admin.password);
-    if (!isMatch) throw new UnauthorizedException('Неверные учетные данные');
+    if (!isMatch) throw new UnauthorizedException('Invalid credentials');
 
     const token = this.jwtService.sign({ id: admin.id });
     res.cookie('jwt', token, {
       httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 12 * 60 * 60 * 1000
     });
 
-    return { message: 'Успешно' };
-  
-}
+    return { message: 'Login successful' };
+  }
 
   @Get('check')
   check(@Req() req: Request) {
-    const token = req.cookies?.token;
+    const token = req.cookies?.jwt;
     if (!token) return { authorized: false };
 
     try {
@@ -49,7 +48,7 @@ export class AuthController {
 
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('token');
-    return { message: 'Выход выполнен' };
+    res.clearCookie('jwt');
+    return { message: 'Logout successful' };
   }
 }

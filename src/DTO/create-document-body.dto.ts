@@ -1,6 +1,6 @@
-import { IsDateString, IsOptional, IsString } from "class-validator";
+import { IsString, IsOptional, IsDateString } from 'class-validator';
 
-export class CreateDocumentDto {
+export class CreateDocumentBodyDto {
   @IsString()
   title: string;
 
@@ -13,7 +13,4 @@ export class CreateDocumentDto {
 
   @IsDateString()
   createdAt: string;
-
-  @IsOptional()
-  file?: Express.Multer.File;
 }

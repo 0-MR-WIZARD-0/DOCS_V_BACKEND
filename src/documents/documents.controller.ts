@@ -1,10 +1,28 @@
-import { Controller, Get, Post, Put, Param, UploadedFile, Body, UseInterceptors, Query, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Param,
+  UploadedFile,
+  Body,
+  UseInterceptors,
+  Query,
+  Delete,
+  ValidationPipe,
+  ParseIntPipe,
+} from '@nestjs/common';
+
 import { FileInterceptor } from '@nestjs/platform-express';
 import { DocumentsService } from './documents.service';
+
+import { CreateDocumentBodyDto } from '../DTO/create-document-body.dto';
+import { UpdateDocumentBodyDto } from '../DTO/update-document-body.dto';
+
 import { CreateDocumentDto } from '../DTO/create-document.dto';
 import { UpdateDocumentDto } from '../DTO/update-document.dto';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+
+import { storage, fileFilter } from '../config/multer.config';
 
 @Controller('documents')
 export class DocumentsController {
@@ -14,59 +32,35 @@ export class DocumentsController {
   findAll() {
     return this.service.findAll();
   }
-  
- @Post('upload')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (req, file, cb) => {
-          const randomSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const ext = extname(file.originalname);
-          cb(null, `${file.fieldname}-${randomSuffix}${ext}`);
-        },
-      }),
-    }),
-  )
+
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file', { storage, fileFilter }))
   async upload(
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: { title?: string; description?: string; category: string; createdAt: string },
+    @Body(new ValidationPipe({ whitelist: true })) body: CreateDocumentBodyDto,
   ) {
     const dto: CreateDocumentDto = {
-      title: body.title,
-      description: body.description,
-      category: body.category,
-      createdAt: body.createdAt,
+      ...body,
       file,
     };
+
     return this.service.create(dto);
   }
-  
+
   @Put(':id')
-  @UseInterceptors(FileInterceptor('file', {
-    storage: diskStorage({
-      destination: './uploads',
-      filename: (req, file, cb) => {
-        const randomSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        const ext = extname(file.originalname);
-        cb(null, `${file.fieldname}-${randomSuffix}${ext}`);
-      },
-    }),
-  }))
+  @UseInterceptors(FileInterceptor('file', { storage, fileFilter }))
   async update(
-    @Param('id') id: string,
-    @UploadedFile() file?: Express.Multer.File,
-    @Body() body?: any,
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: Express.Multer.File,
+    @Body(new ValidationPipe({ whitelist: true, transform: true })) body: UpdateDocumentBodyDto,
   ) {
-    const dto: UpdateDocumentDto = {
-      title: body?.title,
-      description: body?.description,
-      category: body?.category,
-      createdAt: body?.createdAt,
-      file,
-    };
-    return this.service.update(Number(id), dto);
-  }
+  const dto: UpdateDocumentDto = {
+    ...body,
+    file,
+  };
+
+  return this.service.update(id, dto);
+}
 
   @Get('search')
   async search(
@@ -77,9 +71,9 @@ export class DocumentsController {
   ) {
     return this.service.search(title, from, to, category);
   }
-  
+
   @Delete(':id')
-  async remove(@Param('id') id: number) {
+  async remove(@Param('id', ParseIntPipe) id: number) {
     return this.service.remove(id);
   }
 }

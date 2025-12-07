@@ -1,7 +1,7 @@
-import { Transform } from "class-transformer";
-import { IsBoolean, IsDateString, IsOptional, IsString } from "class-validator";
+import { Transform } from 'class-transformer';
+import { IsString, IsOptional, IsDateString, IsBoolean } from 'class-validator';
 
-export class UpdateDocumentDto {
+export class UpdateDocumentBodyDto {
   @IsOptional()
   @IsString()
   title?: string;
@@ -17,9 +17,6 @@ export class UpdateDocumentDto {
   @IsOptional()
   @IsDateString()
   createdAt?: string;
-
-  @IsOptional()
-  file?: Express.Multer.File;
 
   @IsOptional()
   @IsBoolean()
