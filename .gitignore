@@ -3,6 +3,8 @@
 /node_modules
 /build
 /uploads
+/migrations/*
+migrations/
 
 # Logs
 logs

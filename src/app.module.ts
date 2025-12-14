@@ -1,13 +1,15 @@
 import { Module } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
-import { DocumentsModule } from './documents/documents.module'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { Admin } from './admin/admin.entity'
-import { Document } from './documents/documents.entity'
 import { AdminModule } from './admin/admin.module'
 import { AuthModule } from './auth/auth.module'
-import { Category } from './categories/category.entity'
-import { CategoryModule } from './categories/category.module'
+import { Section } from './sections/section.entity'
+import { SectionModule } from './sections/section.module'
+import { Subsection } from './subsections/subsection.entity'
+import { SubsectionModule } from './subsections/subsection.module'
+import { Document } from './documents/documents.entity'
+import { DocumentsModule } from './documents/documents.module'
 
 @Module({
   imports: [
@@ -23,14 +25,15 @@ import { CategoryModule } from './categories/category.module'
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         synchronize: false,
-        entities: [Admin, Document, Category]
+        entities: [Admin, Document, Section, Subsection]
       }),
       inject: [ConfigService],
     }),
-    DocumentsModule,
-    CategoryModule,
     AdminModule,
-    AuthModule
+    AuthModule,
+    DocumentsModule,
+    SectionModule,
+    SubsectionModule
   ],
 })
 export class AppModule {}

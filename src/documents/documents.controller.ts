@@ -11,13 +11,11 @@ import {
   Delete,
   ValidationPipe,
   ParseIntPipe,
+  BadRequestException,
 } from '@nestjs/common';
 
 import { FileInterceptor } from '@nestjs/platform-express';
 import { DocumentsService } from './documents.service';
-
-import { CreateDocumentBodyDto } from '../DTO/create-document-body.dto';
-import { UpdateDocumentBodyDto } from '../DTO/update-document-body.dto';
 
 import { CreateDocumentDto } from '../DTO/create-document.dto';
 import { UpdateDocumentDto } from '../DTO/update-document.dto';
@@ -37,13 +35,19 @@ export class DocumentsController {
   @UseInterceptors(FileInterceptor('file', { storage, fileFilter }))
   async upload(
     @UploadedFile() file: Express.Multer.File,
-    @Body(new ValidationPipe({ whitelist: true })) body: CreateDocumentBodyDto,
+    @Body('data') raw: string,
   ) {
-    const dto: CreateDocumentDto = {
-      ...body,
-      file,
-    };
+    const parsed = JSON.parse(raw);
 
+    const body = await new ValidationPipe({
+      whitelist: true,
+      transform: true,
+    }).transform(parsed, {
+      type: 'body',
+      metatype: CreateDocumentDto,
+    });
+
+    const dto: CreateDocumentDto = { ...body, file };
     return this.service.create(dto);
   }
 
@@ -52,28 +56,49 @@ export class DocumentsController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: Express.Multer.File,
-    @Body(new ValidationPipe({ whitelist: true, transform: true })) body: UpdateDocumentBodyDto,
+    @Body('data') raw: string,
   ) {
-  const dto: UpdateDocumentDto = {
-    ...body,
-    file,
-  };
+    let parsed = {};
 
-  return this.service.update(id, dto);
+  try {
+    parsed = raw ? JSON.parse(raw) : {};
+  } catch {
+    throw new BadRequestException("Invalid JSON in 'data'");
+  }
+
+  const dto = await new ValidationPipe({
+    whitelist: true,
+    transform: true,
+  }).transform(parsed, {
+    type: 'body',
+    metatype: UpdateDocumentDto,
+  });
+
+  return this.service.update(id, { ...dto, file });
 }
+
+
+@Put(':id/move/:order')
+
+  async move(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('order', ParseIntPipe) newOrder: number
+  ) {
+  return this.service.move(id, newOrder);
+  }
 
   @Get('search')
   async search(
     @Query('title') title?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
-    @Query('category') category?: string,
   ) {
-    return this.service.search(title, from, to, category);
+    return this.service.search(title, from, to);
   }
 
   @Delete(':id')
   async remove(@Param('id', ParseIntPipe) id: number) {
     return this.service.remove(id);
   }
+
 }

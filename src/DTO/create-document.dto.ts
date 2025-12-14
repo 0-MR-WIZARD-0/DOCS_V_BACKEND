@@ -1,19 +1,30 @@
-import { IsDateString, IsOptional, IsString } from "class-validator";
+import { IsOptional, IsString, IsInt } from 'class-validator';
+import { Express } from 'express';
 
 export class CreateDocumentDto {
+  @IsOptional()
   @IsString()
-  title: string;
+  title?: string;
 
   @IsOptional()
   @IsString()
   description?: string;
 
-  @IsString()
-  category: string;
+  @IsOptional()
+  @IsInt()
+  sectionId?: number;
 
-  @IsDateString()
-  createdAt: string;
+  @IsOptional()
+  @IsInt()
+  subsectionId?: number;
 
   @IsOptional()
   file?: Express.Multer.File;
+
+  @IsOptional()
+  createdAt?: string;
+
+  @IsOptional()
+  @IsInt()
+  order?: number;
 }

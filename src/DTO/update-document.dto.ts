@@ -1,5 +1,5 @@
-import { Transform } from "class-transformer";
-import { IsBoolean, IsDateString, IsOptional, IsString } from "class-validator";
+import { IsOptional, IsString, IsInt } from 'class-validator';
+import { Express } from 'express';
 
 export class UpdateDocumentDto {
   @IsOptional()
@@ -11,18 +11,23 @@ export class UpdateDocumentDto {
   description?: string;
 
   @IsOptional()
-  @IsString()
-  category?: string;
+  @IsInt()
+  sectionId?: number;
 
   @IsOptional()
-  @IsDateString()
-  createdAt?: string;
+  @IsInt()
+  subsectionId?: number;
 
   @IsOptional()
   file?: Express.Multer.File;
 
   @IsOptional()
-  @IsBoolean()
-  @Transform(({ value }) => value === 'true')
   removeFile?: boolean;
+
+  @IsOptional()
+  createdAt?: string;
+
+  @IsOptional()
+  @IsInt()
+  order?: number;
 }
