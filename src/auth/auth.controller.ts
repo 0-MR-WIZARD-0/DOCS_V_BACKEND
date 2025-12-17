@@ -1,15 +1,14 @@
-import { Controller, Post, Body, Res, Get, Req, UnauthorizedException } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { Response, Request } from 'express';
+import { Controller, Post, Body, Res, Get, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Response } from 'express';
 import * as bcrypt from 'bcrypt';
 import { AdminService } from 'src/admin/admin.service';
 import { JwtService } from '@nestjs/jwt';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly adminService: AdminService,
-    private readonly authService: AuthService,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -19,36 +18,37 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const admin = await this.adminService.findByUsername(body.username);
-    if (!admin) throw new UnauthorizedException('Invalid credentials');
+    if (!admin) throw new UnauthorizedException();
 
     const isMatch = await bcrypt.compare(body.password, admin.password);
-    if (!isMatch) throw new UnauthorizedException('Invalid credentials');
+    if (!isMatch) throw new UnauthorizedException();
 
     const token = this.jwtService.sign({ id: admin.id });
+
     res.cookie('jwt', token, {
       httpOnly: true,
-      maxAge: 12 * 60 * 60 * 1000
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 12 * 60 * 60 * 1000,
+      path: '/'
     });
 
-    return { message: 'Login successful' };
+    return {
+      user: { id: admin.id, username: admin.username },
+    };
   }
 
-  @Get('check')
-  check(@Req() req: Request) {
-    const token = req.cookies?.jwt;
-    if (!token) return { authorized: false };
-
-    try {
-      const data = this.authService.verifyToken(token);
-      return { authorized: true, user: data };
-    } catch {
-      return { authorized: false };
-    }
+  @UseGuards(AuthGuard('jwt'))
+  @Get('me')
+  me(@Req() req: any) {
+    return {
+      user: req.user,
+    };
   }
 
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('jwt');
-    return { message: 'Logout successful' };
+    return { success: true };
   }
 }

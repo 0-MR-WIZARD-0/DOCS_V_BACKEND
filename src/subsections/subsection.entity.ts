@@ -28,6 +28,6 @@ export class Subsection {
   })
   documents: Document[];
 
-  @Column({ type: 'int', default: 0 })
+  @Column({ type: 'int', default: 1 })
   order: number;
 }

@@ -147,7 +147,7 @@ export class DocumentsService {
     });
   }
 
-  async search(queryText?: string, from?: string, to?: string) {
+  async search(queryText?: string) {
     const q = this.repo
       .createQueryBuilder('d')
       .leftJoinAndSelect('d.section', 's')
@@ -162,50 +162,46 @@ export class DocumentsService {
       );
     }
 
-    if (from) q.andWhere('d.createdAt >= :from', { from });
-    if (to) q.andWhere('d.createdAt <= :to', { to });
-
     return q
       .orderBy('s.order', 'ASC')
       .addOrderBy('ss.order', 'ASC')
       .addOrderBy('d.order', 'ASC')
-      .addOrderBy('d.createdAt', 'DESC')
       .getMany();
   }
 
   async move(id: number, newOrder: number): Promise<void> {
-  const doc = await this.repo.findOne({
-    where: { id },
-    relations: ['section', 'subsection'],
-  });
+    const doc = await this.repo.findOne({
+      where: { id },
+      relations: ['section', 'subsection'],
+    });
 
-  if (!doc) throw new NotFoundException('Document not found');
+    if (!doc) throw new NotFoundException('Document not found');
 
-  const docs = await this.repo.find({
-    where: doc.subsection
-      ? { subsection: { id: doc.subsection.id } }
-      : { section: { id: doc.section.id }, subsection: null },
-    order: { order: 'ASC' },
-  });
+    const docs = await this.repo.find({
+      where: doc.subsection
+        ? { subsection: { id: doc.subsection.id } }
+        : { section: { id: doc.section.id }, subsection: null },
+      order: { order: 'ASC' },
+    });
 
-  if (!docs.length) return;
+    const minOrder = 1;
+    const maxOrder = docs.length;
 
-  const oldIndex = docs.findIndex(d => d.id === id);
-  if (oldIndex === -1) return;
+    if (newOrder < minOrder) newOrder = minOrder;
+    if (newOrder > maxOrder) newOrder = maxOrder;
 
-  if (newOrder < 0) newOrder = 0;
-  if (newOrder > docs.length - 1) newOrder = docs.length - 1;
+    const otherDocs = docs.filter(d => d.id !== id);
 
-  const item = docs.splice(oldIndex, 1)[0];
-  docs.splice(newOrder, 0, item);
+    otherDocs.forEach((d, index) => {
+      if (index + 1 >= newOrder) d.order = index + 2;
+      else d.order = index + 1;
+    });
 
-  await this.repo.manager.transaction(async (manager) => {
-    for (let idx = 0; idx < docs.length; idx++) {
-      const d = docs[idx];
-      await manager.update(Document, d.id, { order: idx + 1 });
-    }
-  });
-}
+    doc.order = newOrder;
+
+    await this.repo.save([...otherDocs, doc]);
+  }
+
 
   async remove(id: number) {
     const doc = await this.repo.findOne({ where: { id } });

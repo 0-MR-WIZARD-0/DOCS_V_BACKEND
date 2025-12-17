@@ -93,5 +93,4 @@ export class SectionService {
 
     return this.sectionRepo.delete(id);
   }
-
 }

@@ -12,6 +12,7 @@ import {
   ValidationPipe,
   ParseIntPipe,
   BadRequestException,
+  UseGuards,
 } from '@nestjs/common';
 
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -21,6 +22,7 @@ import { CreateDocumentDto } from '../DTO/create-document.dto';
 import { UpdateDocumentDto } from '../DTO/update-document.dto';
 
 import { storage, fileFilter } from '../config/multer.config';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('documents')
 export class DocumentsController {
@@ -31,6 +33,7 @@ export class DocumentsController {
     return this.service.findAll();
   }
 
+  @UseGuards(AuthGuard('jwt'))
   @Post('upload')
   @UseInterceptors(FileInterceptor('file', { storage, fileFilter }))
   async upload(
@@ -51,6 +54,7 @@ export class DocumentsController {
     return this.service.create(dto);
   }
 
+  @UseGuards(AuthGuard('jwt'))
   @Put(':id')
   @UseInterceptors(FileInterceptor('file', { storage, fileFilter }))
   async update(
@@ -77,28 +81,25 @@ export class DocumentsController {
   return this.service.update(id, { ...dto, file });
 }
 
-
-@Put(':id/move/:order')
-
+  @UseGuards(AuthGuard('jwt'))
+  @Put(':id/move/:order')
   async move(
     @Param('id', ParseIntPipe) id: number,
     @Param('order', ParseIntPipe) newOrder: number
   ) {
-  return this.service.move(id, newOrder);
+    return this.service.move(id, newOrder);
   }
 
   @Get('search')
   async search(
     @Query('title') title?: string,
-    @Query('from') from?: string,
-    @Query('to') to?: string,
   ) {
-    return this.service.search(title, from, to);
+    return this.service.search(title);
   }
 
+  @UseGuards(AuthGuard('jwt'))
   @Delete(':id')
   async remove(@Param('id', ParseIntPipe) id: number) {
     return this.service.remove(id);
   }
-
 }
