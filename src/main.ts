@@ -9,9 +9,6 @@ dotenv.config();
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule)
-
-  app.setGlobalPrefix('api') //prod
-
   app.enableCors({
     origin: process.env.ORIGIN,
     credentials: true, 

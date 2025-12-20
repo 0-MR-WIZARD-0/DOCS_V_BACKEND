@@ -33,14 +33,21 @@ export class DocumentsController {
     return this.service.findAll();
   }
 
+  @Get('search')
+  async search(
+    @Query('title') title?: string,
+  ) {
+    return this.service.search(title);
+  }
+
   @UseGuards(AuthGuard('jwt'))
   @Post('upload')
   @UseInterceptors(FileInterceptor('file', { storage, fileFilter }))
-  async upload(
-    @UploadedFile() file: Express.Multer.File,
-    @Body('data') raw: string,
-  ) {
-    const parsed = JSON.parse(raw);
+    async upload(
+      @UploadedFile() file: Express.Multer.File,
+      @Body('data') raw: string,
+    ) {
+      const parsed = JSON.parse(raw);
 
     const body = await new ValidationPipe({
       whitelist: true,
@@ -79,7 +86,7 @@ export class DocumentsController {
   });
 
   return this.service.update(id, { ...dto, file });
-}
+  }
 
   @UseGuards(AuthGuard('jwt'))
   @Put(':id/move/:order')
@@ -88,13 +95,6 @@ export class DocumentsController {
     @Param('order', ParseIntPipe) newOrder: number
   ) {
     return this.service.move(id, newOrder);
-  }
-
-  @Get('search')
-  async search(
-    @Query('title') title?: string,
-  ) {
-    return this.service.search(title);
   }
 
   @UseGuards(AuthGuard('jwt'))

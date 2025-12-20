@@ -147,7 +147,7 @@ export class DocumentsService {
     });
   }
 
-  async search(queryText?: string) {
+   async search(queryText?: string) {
     const q = this.repo
       .createQueryBuilder('d')
       .leftJoinAndSelect('d.section', 's')
@@ -155,10 +155,8 @@ export class DocumentsService {
 
     if (queryText) {
       q.andWhere(
-        `LOWER(d.title) LIKE LOWER(:q)
-        OR LOWER(s.name) LIKE LOWER(:q)
-        OR LOWER(ss.name) LIKE LOWER(:q)`,
-        { q: `%${queryText}%` },
+        `LOWER(d.title) ILIKE LOWER(:q)`,
+        { q: `${queryText}%` },
       );
     }
 
