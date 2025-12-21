@@ -1,15 +1,17 @@
-import { Injectable, NotFoundException} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Subsection } from './subsection.entity';
 import { CreateSubsectionDto } from '../DTO/create-subsection.dto';
 import { UpdateSubsectionDto } from '../DTO/update-subsection.dto';
+import { DocumentsService } from 'src/documents/documents.service';  // Импортируем DocumentsService
 
 @Injectable()
 export class SubsectionService {
   constructor(
     @InjectRepository(Subsection)
     private subsectionRepo: Repository<Subsection>,
+    private readonly documentsService: DocumentsService,  // Инжектируем DocumentsService
   ) {}
 
   async findAll() {
@@ -64,11 +66,29 @@ export class SubsectionService {
   }
 
   async remove(id: number) {
-    const subsection = await this.subsectionRepo.findOne({ where: { id }, relations: ['documents'] });
+    const subsection = await this.subsectionRepo.findOne({
+      where: { id },
+      relations: ['documents', 'section'],
+    });
     if (!subsection) throw new NotFoundException('Subsection not found');
 
-    await Promise.all(subsection.documents.map(doc => doc.id && this.subsectionRepo.manager.delete('Document', doc.id)));
+    const docsToDelete = subsection.documents;
+    for (const doc of docsToDelete) {
+      await this.documentsService.remove(doc.id);
+    }
 
-    return this.subsectionRepo.delete(id);
+    await this.subsectionRepo.delete(id);
+
+    const deletedOrder = subsection.order;
+
+    await this.subsectionRepo
+      .createQueryBuilder()
+      .update(Subsection)
+      .set({ order: () => `"order" - 1` })
+      .where('"order" > :deletedOrder', { deletedOrder })
+      .andWhere('sectionId = :sectionId', { sectionId: subsection.section.id })
+      .execute();
+
+    return { message: 'Subsection and related documents deleted and reordered' };
   }
 }

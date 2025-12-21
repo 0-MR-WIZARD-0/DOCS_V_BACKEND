@@ -4,12 +4,14 @@ import { Repository } from 'typeorm';
 import { Section } from './section.entity';
 import { CreateSectionDto } from '../DTO/create-section.dto';
 import { UpdateSectionDto } from '../DTO/update-section.dto';
+import { DocumentsService } from 'src/documents/documents.service';
 
 @Injectable()
 export class SectionService {
   constructor(
     @InjectRepository(Section)
     private sectionRepo: Repository<Section>,
+    private readonly documentsService: DocumentsService
   ) {}
 
   async findAll() {
@@ -85,12 +87,37 @@ export class SectionService {
   }
 
   async remove(id: number) {
-    const section = await this.sectionRepo.findOne({ where: { id }, relations: ['subsections', 'documents'] });
+    const section = await this.sectionRepo.findOne({
+      where: { id },
+      relations: ['subsections', 'documents', 'subsections.documents'],
+    });
+
     if (!section) throw new NotFoundException('Section not found');
 
-    await Promise.all(section.documents.map(doc => doc.id && this.sectionRepo.manager.delete('Document', doc.id)));
-    await Promise.all(section.subsections.map(sub => this.sectionRepo.manager.delete('Subsection', sub.id)));
+    const deletedOrder = section.order;
 
-    return this.sectionRepo.delete(id);
+    const docsToDelete = [
+      ...section.documents,
+      ...section.subsections.flatMap(sub => sub.documents),
+    ];
+
+    for (const doc of docsToDelete) {
+      await this.documentsService.remove(doc.id);
+    }
+
+    for (const sub of section.subsections) {
+      await this.sectionRepo.manager.delete('Subsection', sub.id);
+    }
+
+    await this.sectionRepo.delete(id);
+
+    await this.sectionRepo
+      .createQueryBuilder()
+      .update(Section)
+      .set({ order: () => `"order" - 1` })
+      .where('"order" > :deletedOrder', { deletedOrder })
+      .execute();
+
+    return { message: 'Section deleted and reordered' };
   }
 }

@@ -130,7 +130,6 @@ export class DocumentsService {
 
     doc.title = dto.title ?? doc.title;
     doc.description = dto.description ?? doc.description;
-    doc.createdAt = dto.createdAt ? new Date(dto.createdAt) : doc.createdAt;
 
     return this.repo.save(doc);
   }
@@ -202,12 +201,39 @@ export class DocumentsService {
 
 
   async remove(id: number) {
-    const doc = await this.repo.findOne({ where: { id } });
+    const doc = await this.repo.findOne({
+      where: { id },
+      relations: ['section', 'subsection'],
+    });
+
     if (!doc) throw new NotFoundException('Document not found');
 
-    if (doc.path) await this.fileService.deleteFile(doc.path);
+    const deletedOrder = doc.order;
+    const sectionId = doc.section.id;
+    const subsectionId = doc.subsection?.id ?? null;
+
+    if (doc.path) {
+      await this.fileService.deleteFile(doc.path);
+    }
+
     await this.repo.delete(id);
 
-    return { message: 'Document deleted successfully' };
+    const qb = this.repo
+      .createQueryBuilder()
+      .update(Document)
+      .set({ order: () => `"order" - 1` })
+      .where('"order" > :deletedOrder', { deletedOrder })
+      .andWhere('sectionId = :sectionId', { sectionId });
+
+    if (subsectionId) {
+      qb.andWhere('subsectionId = :subsectionId', { subsectionId });
+    } else {
+      qb.andWhere('subsectionId IS NULL');
+    }
+
+    await qb.execute();
+
+    return { message: 'Document deleted and reordered' };
   }
+
 }

@@ -7,10 +7,12 @@ import { Document } from '../documents/documents.entity';
 
 import { SectionService } from './section.service';
 import { SectionController } from './section.controller';
+import { DocumentsModule } from 'src/documents/documents.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Section, Subsection, Document]),
+    DocumentsModule
   ],
   controllers: [SectionController],
   providers: [SectionService],

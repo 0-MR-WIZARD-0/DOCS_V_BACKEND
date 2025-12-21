@@ -13,5 +13,6 @@ import { Document } from "./documents.entity";
   ],
   controllers: [DocumentsController],
   providers: [DocumentsService, FileService],
+  exports: [DocumentsService]
 })
 export class DocumentsModule {}
