@@ -15,33 +15,33 @@ export class SectionService {
   ) {}
 
   async findAll() {
-  const sections = await this.sectionRepo.find({
-    relations: ['subsections', 'subsections.documents', 'documents'],
-    order: { order: 'ASC' },
-  });
+    const sections = await this.sectionRepo.find({
+      relations: ['subsections', 'subsections.documents', 'documents'],
+      order: { order: 'ASC' },
+    });
 
-  const structuredSections = sections.map(section => {
-    
-    const filteredSectionDocs = section.documents.filter(
-      doc => doc.subsectionId === null || doc.subsectionId === undefined
-    );
+    const structuredSections = sections.map(section => {
+      
+      const filteredSectionDocs = section.documents.filter(
+        doc => doc.subsectionId === null || doc.subsectionId === undefined
+      );
 
-    const filteredSubsections = section.subsections.map(sub => ({
-      ...sub,
-      documents: sub.documents.filter(
-        doc => doc.subsectionId === sub.id
-      ),
-    }));
+      const filteredSubsections = section.subsections.map(sub => ({
+        ...sub,
+        documents: sub.documents.filter(
+          doc => doc.subsectionId === sub.id
+        ),
+      }));
 
-    return {
-      ...section,
-      documents: filteredSectionDocs,
-      subsections: filteredSubsections,
-    };
-  });
+      return {
+        ...section,
+        documents: filteredSectionDocs,
+        subsections: filteredSubsections,
+      };
+    });
 
-  return structuredSections;
-}
+    return structuredSections;
+  }
 
   async create(dto: CreateSectionDto) {
     const maxOrder = await this.sectionRepo

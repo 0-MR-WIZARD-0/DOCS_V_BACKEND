@@ -5,7 +5,11 @@ import * as dotenv from 'dotenv';
 import * as cookieParser from 'cookie-parser';
 import { NestExpressApplication } from '@nestjs/platform-express';
 
-dotenv.config();
+dotenv.config({
+  path: process.env.NODE_ENV === 'production'
+    ? '.env.production'
+    : '.env.development',
+});
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule)
@@ -17,7 +21,10 @@ async function bootstrap() {
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads/',
   });
-  await app.listen(4000)
+  const port = Number(process.env.PORT) || 4000;
+  const host = process.env.HOST || '127.0.0.1';
+
+  await app.listen(port, host);
 }
 
 bootstrap()

@@ -12,7 +12,7 @@ export class SectionController {
   findAll() {
     return this.service.findAll();
   }
-
+  
   @UseGuards(AuthGuard('jwt'))
   @Post()
   create(@Body() dto: CreateSectionDto) {
