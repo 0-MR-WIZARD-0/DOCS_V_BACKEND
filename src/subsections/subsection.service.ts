@@ -4,14 +4,14 @@ import { Repository } from 'typeorm';
 import { Subsection } from './subsection.entity';
 import { CreateSubsectionDto } from '../DTO/create-subsection.dto';
 import { UpdateSubsectionDto } from '../DTO/update-subsection.dto';
-import { DocumentsService } from 'src/documents/documents.service';  // Импортируем DocumentsService
+import { DocumentsService } from 'src/documents/documents.service';
 
 @Injectable()
 export class SubsectionService {
   constructor(
     @InjectRepository(Subsection)
     private subsectionRepo: Repository<Subsection>,
-    private readonly documentsService: DocumentsService,  // Инжектируем DocumentsService
+    private readonly documentsService: DocumentsService,
   ) {}
 
   async findAll() {

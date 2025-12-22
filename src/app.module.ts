@@ -15,6 +15,10 @@ import { DocumentsModule } from './documents/documents.module'
   imports: [
      ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath:
+        process.env.NODE_ENV === 'production'
+          ? '.env.production'
+          : '.env.development',
     }),
     TypeOrmModule.forRootAsync({
       useFactory: async (configService: ConfigService) => ({

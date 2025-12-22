@@ -1,15 +1,26 @@
-import { Controller, Post, Body, Res, Get, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Res,
+  Get,
+  Req,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { Response } from 'express';
 import * as bcrypt from 'bcrypt';
 import { AdminService } from 'src/admin/admin.service';
 import { JwtService } from '@nestjs/jwt';
 import { AuthGuard } from '@nestjs/passport';
+import { ConfigService } from '@nestjs/config';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly adminService: AdminService,
     private readonly jwtService: JwtService,
+    private readonly config: ConfigService,
   ) {}
 
   @Post('login')
@@ -28,9 +39,9 @@ export class AuthController {
     res.cookie('jwt', token, {
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === "production",
+      secure: this.config.get('NODE_ENV') === 'production',
       maxAge: 12 * 60 * 60 * 1000,
-      path: '/'
+      path: '/',
     });
 
     return {
@@ -48,7 +59,7 @@ export class AuthController {
 
   @Post('logout')
   logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie('jwt');
+    res.clearCookie('jwt', { path: '/' });
     return { success: true };
   }
 }
