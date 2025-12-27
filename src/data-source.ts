@@ -5,6 +5,8 @@ import { Section } from './sections/section.entity';
 import 'dotenv/config';
 import { Subsection } from './subsections/subsection.entity';
 
+const isCompiled = __filename.endsWith('.js');
+
 export const AppDataSource = new DataSource({
   type: 'postgres',
   host: process.env.DB_HOST,
@@ -13,6 +15,8 @@ export const AppDataSource = new DataSource({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   entities: [Admin, Document, Section, Subsection],
-  migrations: ['src/migrations/*.{ts,js}'],
+  migrations: isCompiled
+    ? ['dist/migrations/*.js']
+    : ['src/migrations/*.ts'],
   synchronize: false
 });
