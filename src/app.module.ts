@@ -29,7 +29,9 @@ import { DocumentsModule } from './documents/documents.module'
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
         synchronize: false,
-        entities: [Admin, Document, Section, Subsection]
+        entities: [Admin, Document, Section, Subsection],
+        migrations: [__dirname + '/migrations/*.{js,ts}'],
+        migrationsRun: false,
       }),
       inject: [ConfigService],
     }),
