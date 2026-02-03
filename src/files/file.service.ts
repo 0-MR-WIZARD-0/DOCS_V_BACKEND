@@ -4,15 +4,18 @@ import { promises as fs } from 'fs';
 
 @Injectable()
 export class FileService {
+  private readonly uploadsDir = path.resolve(process.cwd(), 'uploads');
+
   async deleteFile(filePath: string) {
     if (!filePath) return;
 
-    const absPath = path.join(process.cwd(), filePath);
+    const absPath = path.resolve(this.uploadsDir, path.normalize(filePath));
 
-    try {
-      await fs.rm(absPath, { force: true });
-    } catch (e) {
-      console.error('Failed to delete file:', e);
+    if (!absPath.startsWith(this.uploadsDir)) {
+      console.error('Path traversal attempt:', absPath);
+      return;
     }
+
+    await fs.rm(absPath, { force: true });
   }
 }

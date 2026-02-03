@@ -1,5 +1,5 @@
 import { diskStorage } from 'multer';
-import { extname } from 'path';
+import path, { extname } from 'path';
 import { BadRequestException } from '@nestjs/common';
 
 export const allowedMimeTypes = [
@@ -18,8 +18,10 @@ export const fileFilter = (req: any, file: Express.Multer.File, cb: Function) =>
   }
 };
 
+export const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads');
+
 export const storage = diskStorage({
-  destination: './uploads',
+  destination: UPLOADS_DIR,
   filename: (req, file, cb) => {
     const randomSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     const ext = extname(file.originalname);
