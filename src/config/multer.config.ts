@@ -1,5 +1,5 @@
 import { diskStorage } from 'multer';
-import path, { extname } from 'path';
+import * as path from 'path';
 import { BadRequestException } from '@nestjs/common';
 
 export const allowedMimeTypes = [
@@ -24,7 +24,7 @@ export const storage = diskStorage({
   destination: UPLOADS_DIR,
   filename: (req, file, cb) => {
     const randomSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const ext = extname(file.originalname);
+    const ext = path.extname(file.originalname);
     cb(null, `${file.fieldname}-${randomSuffix}${ext}`);
   },
 });
